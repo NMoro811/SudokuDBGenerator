@@ -9,6 +9,7 @@ public class PuzzleGenerator {
 	static int totalBound;
 	static int rowcolBound;
 	static int level = 5;
+	// Full pattern
 	static int[][] grid = {
 								{9, 5, 2, 7, 1, 6, 3, 8, 4}, 
 								{1, 8, 7, 3, 4, 2, 6, 9, 5}, 
@@ -22,7 +23,7 @@ public class PuzzleGenerator {
 							};
 	
 	// Main method: generates a puzzle for the desired level of difficulty
-	// public void createPuzzle(int[][] full_pattern, int level) {
+
 	public static void main(String[] args) {
 
 		long startTime = System.nanoTime();
@@ -34,8 +35,8 @@ public class PuzzleGenerator {
 		
 		int dug_cells = 0;
 		int indx = 0;
-		while (dug_cells <= 81-totalBound && indx <= 80) {
-			
+		while (dug_cells < 81-totalBound && indx <= 80) {
+
 			int[] next_cell = digging_pattern[indx];
 			int r = next_cell[0];
 			int c = next_cell[1];
@@ -60,7 +61,6 @@ public class PuzzleGenerator {
 		long totalTime = (endTime - startTime)/1000000;
 		
 		// WILL TAKE OUT AFTER GENERALIZING THE USE OF BOARDSTATE AND ITS DISPLAY() METHOD
-		System.out.println();
 		System.out.println("Level "+level+" puzzle generated from seed: ");
 		for (int r=0; r<=8; r++) {
 			System.out.println();
@@ -81,11 +81,6 @@ public class PuzzleGenerator {
 		System.out.println(totalTime+" ms.");
 	}
 
-	
-	
-	
-	
-	
 	// OPERATOR 1
 	
 	public static int[][] generateDiggingPattern(int level) {
@@ -132,60 +127,6 @@ public class PuzzleGenerator {
 			array[m] = temp;
 	    }
 	}
-
-	/*
-	 *  Digging patterns for levels 3 and 4 as suggested by the article. Currently discarded.
-	 *  
-	public static int[][] jumpOneCell(int[][] pattern) {
-		
-		int indx = 0;
-		
-		for (int r=0; r<=8; r++) {
-			if (r % 2 == 0) {
-				for (int c=0; c<=8; c++) {
-					boolean cellEven = (r+c)%2 == 0;
-					if (cellEven) {
-						pattern[indx] = new int[]{r,c};
-					} else {
-						pattern[41+indx] = new int[]{r,c};
-						indx++;
-					}
-				}
-			} else {
-				for (int c=8; c>=0; c--) {
-					boolean cellEven = (r+c)%2 == 0;
-					if (cellEven) {
-						pattern[indx] = new int[]{r,c};
-					} else {
-						pattern[41+indx] = new int[]{r,c};
-						indx++;
-					}
-				}
-			}
-		}
-		return pattern;
-	}
-	
-	public static int[][] wanderAlongS(int[][] pattern) {
-		
-		int indx = 0;
-		
-		for (int r=0; r<=8; r++) {
-			if (r % 2 == 0) {
-				for (int c=0; c<=8; c++) {
-					pattern[indx] = new int[]{r,c};
-					indx++;
-				}
-			} else {
-				for (int c=8; c>=0; c--) {
-					pattern[indx] = new int[]{r,c};
-					indx++;
-				}
-			}
-		}
-		return pattern;
-	}
-	*/
 	
 	public static int[][] leftRightTopBottom(int[][] pattern) {
 		
@@ -258,8 +199,6 @@ public class PuzzleGenerator {
 				
 				if (solution_found) {
 					break;
-				} else {
-					grid_clone = deepCopy(current_grid);
 				}
 			}
 			trial_num++;
@@ -282,5 +221,61 @@ public class PuzzleGenerator {
 		// TODO (at the very end, when everything else's working)
 		;
 	}
+	
+	
+	
+	/*
+	 *  Digging patterns for levels 3 and 4 as suggested by the article. Currently discarded.
+	 *  
+	public static int[][] jumpOneCell(int[][] pattern) {
+		
+		int indx = 0;
+		
+		for (int r=0; r<=8; r++) {
+			if (r % 2 == 0) {
+				for (int c=0; c<=8; c++) {
+					boolean cellEven = (r+c)%2 == 0;
+					if (cellEven) {
+						pattern[indx] = new int[]{r,c};
+					} else {
+						pattern[41+indx] = new int[]{r,c};
+						indx++;
+					}
+				}
+			} else {
+				for (int c=8; c>=0; c--) {
+					boolean cellEven = (r+c)%2 == 0;
+					if (cellEven) {
+						pattern[indx] = new int[]{r,c};
+					} else {
+						pattern[41+indx] = new int[]{r,c};
+						indx++;
+					}
+				}
+			}
+		}
+		return pattern;
+	}
+	
+	public static int[][] wanderAlongS(int[][] pattern) {
+		
+		int indx = 0;
+		
+		for (int r=0; r<=8; r++) {
+			if (r % 2 == 0) {
+				for (int c=0; c<=8; c++) {
+					pattern[indx] = new int[]{r,c};
+					indx++;
+				}
+			} else {
+				for (int c=8; c>=0; c--) {
+					pattern[indx] = new int[]{r,c};
+					indx++;
+				}
+			}
+		}
+		return pattern;
+	}
+	*/
 	
 }
