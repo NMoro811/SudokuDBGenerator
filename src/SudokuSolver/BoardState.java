@@ -6,6 +6,7 @@ import java.util.HashSet;
 public class BoardState {
 	
 	public int[][] grid;
+	public boolean valid_grid = true; // by default
 	public int num_empty_cells = 0;
 	public int[][] listEmptyCells;
 	public HashMap<int[], HashSet<Integer>> backtrackingMap = new HashMap();
@@ -17,18 +18,18 @@ public class BoardState {
 	// To be executed at the beginning; corrects the value of num_empty_cells (MAY CHANGE THIS LATER)
 	void display() {
 		for (int r=0; r<=8; r++) {
-			System.out.println();
+			// System.out.println();
 			for (int c=0; c<=8; c++) {
 				if(this.grid[r][c] == 0) {
-					System.out.print("#");
+					// System.out.print("#");
 					num_empty_cells++;
 			}
 				else {
-					System.out.print(this.grid[r][c]);
+					// System.out.print(this.grid[r][c]);
 				}
 			}
 		}
-		System.out.println();
+		// System.out.println();
 	}
 	
 	void storeEmptyCells() {
@@ -53,6 +54,11 @@ public class BoardState {
 		HashSet<Integer> rowConstraints = new HashSet<Integer>();
 		
 		for (int c=0; c<=8; c++) {
+			
+			if (rowConstraints.contains(this.grid[r][c])) {
+				this.valid_grid = false;
+			}
+			
 			if(this.grid[r][c] != 0) {
 				rowConstraints.add(this.grid[r][c]);
 			}
@@ -64,6 +70,11 @@ public class BoardState {
 		HashSet<Integer> colConstraints = new HashSet<Integer>();
 		
 		for (int r=0; r<=8; r++) {
+			
+			if (colConstraints.contains(this.grid[r][c])) {
+				this.valid_grid = false;
+			}
+			
 			if(this.grid[r][c] != 0) {
 				colConstraints.add(this.grid[r][c]);
 			}
@@ -85,6 +96,11 @@ public class BoardState {
 		
 		for(Integer col : cols_of_block) {
 			for (Integer row : rows_of_block) {
+				
+				if (blockConstraints.contains(this.grid[r][c])) {
+					this.valid_grid = false;
+				}
+				
 				if(this.grid[row][col] != 0) {
 					blockConstraints.add(this.grid[row][col]);
 				}
