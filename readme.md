@@ -2,7 +2,7 @@
 
 Current stage of the project:
 
-I have created a Sudoku puzzle generator based on 5 different levels of difficulty. This program takes as (currently manual) input a fully solved Sudoku grid and uses a modified version of the algorithm in the article below to output a new puzzle corresponding to the introduced level of difficulty. Levels 1 to 4 take ca. 10^1 to 10^2 ms in generating a new puzzle; evil-leveled puzzles can take from 10^3 ms up to the order of 10^5 ms. The created puzzles comply with all the requirements and seem reasonable from the user's perspective.
+I have created a Sudoku puzzle generator based on 5 different levels of difficulty. This program creates thousands of valid terminal patterns from an empty grid based on a Las Vegas algorithm as described in the literature. A upper bound of 0.1s is set on the creation of each full grid. Then, it uses a modified version of the algorithm in the article below to output a new puzzle corresponding to the introduced level of difficulty. The created puzzles comply with all the requirements and seem reasonable from the user's perspective.
 
 # Next step
 
