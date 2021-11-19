@@ -8,25 +8,10 @@ public class PuzzleGenerator {
 	// Declaring restriction parameters on the puzzle's generation (see OPERATOR 2)
 	static int totalBound;
 	static int rowcolBound;
-	static int level = 5;
-	// Full pattern
-	static int[][] grid = {
-								{9, 5, 2, 7, 1, 6, 3, 8, 4}, 
-								{1, 8, 7, 3, 4, 2, 6, 9, 5}, 
-								{6, 4, 3, 8, 5, 9, 1, 7, 2},
-								{8, 6, 4, 9, 2, 1, 5, 3, 7},
-								{3, 7, 1, 6, 8, 5, 4, 2, 9},
-								{5, 2, 9, 4, 7, 3, 8, 6, 1},
-								{7, 1, 5, 2, 6, 8, 9, 4, 3},
-								{4, 3, 6, 1, 9, 7, 2, 5, 8},
-								{2, 9, 8, 5, 3, 4, 7, 1, 6},
-							};
 	
 	// Main method: generates a puzzle for the desired level of difficulty
 
-	public static void main(String[] args) {
-
-		long startTime = System.nanoTime();
+	public static int[][] generate(int[][] grid, int level) {
 		
 		int[][] digging_pattern = generateDiggingPattern(level);
 		restrictionOnGivens(level);
@@ -56,29 +41,7 @@ public class PuzzleGenerator {
 			}
 			indx++;
 		}
-		
-		long endTime   = System.nanoTime();
-		long totalTime = (endTime - startTime)/1000000;
-		
-		// WILL TAKE OUT AFTER GENERALIZING THE USE OF BOARDSTATE AND ITS DISPLAY() METHOD
-		System.out.println("Level "+level+" puzzle generated from seed: ");
-		for (int r=0; r<=8; r++) {
-			System.out.println();
-			for (int c=0; c<=8; c++) {
-				if(grid[r][c] == 0) {
-					System.out.print("#");
-			}
-				else {
-					System.out.print(grid[r][c]);
-				}
-			}
-		}
-		System.out.println();
-		System.out.println();
-		System.out.println("Total givens: "+(81-dug_cells));
-		System.out.println("row_givens: "+Arrays.toString(row_givens));
-		System.out.println("col_givens"+Arrays.toString(col_givens));
-		System.out.println(totalTime+" ms.");
+		return grid;
 	}
 
 	// OPERATOR 1
@@ -195,7 +158,7 @@ public class PuzzleGenerator {
 			if (trial_num != current_number) {
 				grid_clone[r][c] = trial_num;
 				
-				solution_found = BacktrackingSolver.solve(grid_clone);
+				solution_found = BacktrackingSolver.solve(grid_clone, 0); // time_limit = 0: no time limit for backtracking
 				
 				if (solution_found) {
 					break;
@@ -214,68 +177,4 @@ public class PuzzleGenerator {
 	    }
 	    return result;
 	}
-	
-	// OPERATOR 5
-	
-	public static void propagatePuzzle() {
-		// TODO (at the very end, when everything else's working)
-		;
-	}
-	
-	
-	
-	/*
-	 *  Digging patterns for levels 3 and 4 as suggested by the article. Currently discarded.
-	 *  
-	public static int[][] jumpOneCell(int[][] pattern) {
-		
-		int indx = 0;
-		
-		for (int r=0; r<=8; r++) {
-			if (r % 2 == 0) {
-				for (int c=0; c<=8; c++) {
-					boolean cellEven = (r+c)%2 == 0;
-					if (cellEven) {
-						pattern[indx] = new int[]{r,c};
-					} else {
-						pattern[41+indx] = new int[]{r,c};
-						indx++;
-					}
-				}
-			} else {
-				for (int c=8; c>=0; c--) {
-					boolean cellEven = (r+c)%2 == 0;
-					if (cellEven) {
-						pattern[indx] = new int[]{r,c};
-					} else {
-						pattern[41+indx] = new int[]{r,c};
-						indx++;
-					}
-				}
-			}
-		}
-		return pattern;
-	}
-	
-	public static int[][] wanderAlongS(int[][] pattern) {
-		
-		int indx = 0;
-		
-		for (int r=0; r<=8; r++) {
-			if (r % 2 == 0) {
-				for (int c=0; c<=8; c++) {
-					pattern[indx] = new int[]{r,c};
-					indx++;
-				}
-			} else {
-				for (int c=8; c>=0; c--) {
-					pattern[indx] = new int[]{r,c};
-					indx++;
-				}
-			}
-		}
-		return pattern;
-	}
-	*/
-	
 }

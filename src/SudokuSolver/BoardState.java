@@ -9,7 +9,7 @@ public class BoardState {
 	public boolean valid_grid = true; // by default
 	public int num_empty_cells = 0;
 	public int[][] listEmptyCells;
-	public HashMap<int[], HashSet<Integer>> backtrackingMap = new HashMap();
+	public HashMap<int[], HashSet<Integer>> backtrackingMap = new HashMap<int[], HashSet<Integer>>();
 	
 	BoardState(int[][] grid) {
 		this.grid = grid;
@@ -18,23 +18,36 @@ public class BoardState {
 	// To be executed at the beginning; corrects the value of num_empty_cells (MAY CHANGE THIS LATER)
 	void display() {
 		for (int r=0; r<=8; r++) {
-			// System.out.println();
+			System.out.println();
 			for (int c=0; c<=8; c++) {
 				if(this.grid[r][c] == 0) {
-					// System.out.print("#");
-					num_empty_cells++;
+					System.out.print("#");
 			}
 				else {
-					// System.out.print(this.grid[r][c]);
+					System.out.print(this.grid[r][c]);
 				}
 			}
 		}
-		// System.out.println();
+		System.out.println();
+		System.out.println();
 	}
 	
 	void storeEmptyCells() {
+		
+		// Determine number of empty cells
+		for (int r=0; r<=8; r++) {
+			for (int c=0; c<=8; c++) {
+				if(this.grid[r][c] == 0) {
+					num_empty_cells++;
+			}
+				else {
+				}
+			}
+		}
+		
 		// Note: for computational efficiency's sake, it is crucial to fill the cells in order (L -> R and T -> B), which
 		// is why they must be stored in order in an int[][] (as opposed to storing them in a HashSet and then converting toArray).
+		
 		listEmptyCells = new int[this.num_empty_cells][2];
 		int indx = 0;
 		
