@@ -8,10 +8,15 @@ public class PuzzleGenerator {
 	// Declaring restriction parameters on the puzzle's generation (see OPERATOR 2)
 	static int totalBound;
 	static int rowcolBound;
+	static long time_limit_per_puzzle = 1000;
+	static boolean exceed_time_limit;
 	
 	// Main method: generates a puzzle for the desired level of difficulty
 
 	public static int[][] generate(int[][] grid, int level) {
+		
+		long startTime = System.currentTimeMillis(); // start timer
+		exceed_time_limit = false;
 		
 		int[][] digging_pattern = generateDiggingPattern(level);
 		restrictionOnGivens(level);
@@ -20,7 +25,7 @@ public class PuzzleGenerator {
 		
 		int dug_cells = 0;
 		int indx = 0;
-		while (dug_cells < 81-totalBound && indx <= 80) {
+		while (dug_cells < 81-totalBound && indx <= 80 && !exceed_time_limit) {
 
 			int[] next_cell = digging_pattern[indx];
 			int r = next_cell[0];
@@ -30,7 +35,7 @@ public class PuzzleGenerator {
 			
 			if (!violates_restriction) {
 				
-				boolean can_be_dug = checkUniqueness(grid, r, c); // computationally longest step
+				boolean can_be_dug = checkUniqueness(grid, r, c, startTime); // computationally longest step
 
 				if (can_be_dug) {
 					grid[r][c] = 0;
@@ -40,7 +45,14 @@ public class PuzzleGenerator {
 				}
 			}
 			indx++;
+			long currentTime = System.currentTimeMillis();
+			exceed_time_limit = (currentTime-startTime) >= time_limit_per_puzzle;
 		}
+		
+		if (exceed_time_limit) {
+			grid[0][0] = -1; // notifies Main that a Puzzle could not be generated in the desired time, so a new attempt is made
+		}
+		
 		return grid;
 	}
 
@@ -146,19 +158,26 @@ public class PuzzleGenerator {
 	
 	// OPERATOR 3 & 4
 	
-	public static boolean checkUniqueness(int[][] current_grid, int r, int c) {
+	public static boolean checkUniqueness(int[][] current_grid, int r, int c, long startTime) {
 		
 		int current_number = current_grid[r][c];
 		boolean solution_found = false;
 		int trial_num = 1;
 		int[][] grid_clone = deepCopy(current_grid);
 		
-		while (trial_num <= 9) {
+		while (trial_num <= 9 && !exceed_time_limit) {
 			
 			if (trial_num != current_number) {
 				grid_clone[r][c] = trial_num;
 				
-				solution_found = BacktrackingSolver.solve(grid_clone, 0); // time_limit = 0: no time limit for backtracking
+				long currentTime = System.currentTimeMillis();
+				long time_limit = time_limit_per_puzzle - (currentTime - startTime);
+				
+				if (time_limit > 0) {
+					solution_found = BacktrackingSolver.solve(grid_clone, time_limit);
+				} else {
+					exceed_time_limit = true;
+				}
 				
 				if (solution_found) {
 					break;
