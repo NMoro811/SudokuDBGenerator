@@ -7,98 +7,127 @@ import java.sql.SQLException;
 import java.text.DecimalFormat;
 import java.util.Random;
 
-public class Main {
+/**
+ * This class is able to generate hundreds of thousands of combinations of distinct
+ * Sudoku puzzles of varying levels of difficulty, classifying them and storing them
+ * in a dedicated SQL database. These can later be used to build software or mobile
+ * Sudoku games and can be imported to be used in any multi-purpose programming language
+ * since both the puzzles and their solutions are encoded as strings in the database.
+ * The fields {@code SEED_PUZZLES} and {@code maxPuzzles} can be adjusted to fit the
+ * user's needs and their PC's performance when generating the puzzles.
+ * 
+ * @author Nicolás Moro
+ */
+
+class Main{
 	
-	static int lvl = 5;
+	// Determine number of puzzles to be created per difficulty level
+	private final static long SEED_PUZZLES = 10; // number of generated seed puzzles
+	private static long maxPuzzles = 1000; // maximum number of generated puzzles: up to 26,127,360
+	private static int lvl; // level of difficulty
 	
-	// Generate billions of distinct Sudoku puzzles per level of difficulty and store them in a dedicated SQL database
+	private static int countPuzzles; // per pattern
+	private static int totalCount; // per difficulty level
+	private static boolean maxReached; // stop the program
 	
-	static long seed_puzzles = 10; // number of generated seed puzzles
-	static long max_puzzles = 1000000; // maximum number of generated puzzles: up to 26,127,360
+	private static int[][] grid; // store puzzle
+	private static int[][] solvedGrid; // store solution
+	private static Connection conn = null;
+	private static PreparedStatement st;
 	
-	static int count_puzzles;
-	static int total_count;
-	static boolean max_reached;
+	private static Random r = new Random();
+	private static String rating; // random initial rating for each puzzle
+	private static final DecimalFormat DF = new DecimalFormat("0.00");
 	
-	static int[][] grid;
-	static int[][] solved_grid;
-	static Connection conn = null;
-	static PreparedStatement st;
+	/**
+	 * Generate the desired number of puzzles and store them in the database.
+	 * 
+	 * @param args  The command line arguments.
+	 * @throws SQLException when connection to the database fails or the database already exists.
+	 * @throws ClassNotFoundException when failed to set up driver.
+	 */
 	
-	static Random r = new Random();
-	static String rating;
-	public static final DecimalFormat df = new DecimalFormat("0.00");
-	
-	public static void main(String[] args) {
+	public static void main(String[] args) throws SQLException, ClassNotFoundException {
 		
 		// Create dedicated DB to store all the puzzles and their solutions
-		DBManager.createDB();
+		DatabaseManagement.createDB();
 		
 		long startTime = System.currentTimeMillis();
 		System.out.println("Generating Sudoku puzzles and storing them in the Database...\n");
-		boolean generated_under_time_limit;
+		boolean generatedOnTime;
 		
 		// Setting up new connection to store puzzles
 		try {
-			Class.forName(DBManager.DRIVER);
-			conn = DriverManager.getConnection(DBManager.NEW_DB_URL, DBManager.USER, DBManager.PASS);
+			Class.forName(DatabaseManagement.DRIVER);
+			conn = DriverManager.getConnection(DatabaseManagement.NEW_DB_URL, DatabaseManagement.USER, DatabaseManagement.PASS);
 		} catch (ClassNotFoundException e) {
 			e.printStackTrace();
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
 		
-		// Check max_reached input and correct it if necessary (there are only so many puzzles each seed can generate)
-		long max_propagations = 4*3*6*factorial(9);
-		if (max_puzzles == 0 || max_puzzles > max_propagations) {
-			max_puzzles = max_propagations;
+		// Check maxReached input and correct it if necessary (there are only so many puzzles each seed can generate)
+		final long MAX_PROPAGATIONS = 4*3*6*factorial(9);
+		if (maxPuzzles == 0) {
+			System.out.println("Note: maximum number of puzzles per seed is being generated; this may take a while...");
+			maxPuzzles = MAX_PROPAGATIONS;
+		} else if (maxPuzzles > MAX_PROPAGATIONS) {
+			System.out.println("Warning: "+maxPuzzles+" exceeds the maximum number of possible puzzles/seed.\nReadjusting to "+MAX_PROPAGATIONS+"...");
+			maxPuzzles = MAX_PROPAGATIONS;
 		}
 		
-		for (int seed=1; seed<=seed_puzzles; seed++) {
-			
-			count_puzzles = 0; // reset counter
-			max_reached = false;
-			
-			generated_under_time_limit = false;
-			while (!generated_under_time_limit) {
+		// Iterate through all difficulty levels
+		for(lvl=1; lvl<=5; lvl++) {
+			System.out.println("\nLevel "+lvl+" puzzles: \n");
+			totalCount = 0;
+			for (int seed=1; seed<=SEED_PUZZLES; seed++) {
 				
-				// Create a terminal pattern using a Las Vegas algorithm for n=11 givens
-				solved_grid = TerminalPatternCreator.create_pattern();
+				countPuzzles = 0; // reset counter
+				maxReached = false;
 				
-				// create deepCopy to input in PuzzleGenerator
-				grid = PuzzleGenerator.deepCopy(solved_grid);
-				// Generate a puzzle of the desired level of difficulty
-				grid = PuzzleGenerator.generate(grid, lvl);
+				/* Retry generating seed puzzle if previous attempt went over time. */
 				
-				if (grid[0][0] != -1) {
-					generated_under_time_limit = true;
+				generatedOnTime = false;
+				while (!generatedOnTime) {
+					
+					// Create a terminal pattern using a Las Vegas algorithm for n givens
+					solvedGrid = TerminalPattern.createPattern();
+					
+					// create deepCopy to input in PuzzleGenerator
+					grid = GeneratingAlgorithm.deepCopy(solvedGrid);
+					// Generate a puzzle of the desired level of difficulty
+					grid = GeneratingAlgorithm.generatePuzzle(grid, lvl);
+					
+					if (grid[0][0] != -1) {
+						generatedOnTime = true;
+					}
+					
 				}
 				
-			}
-			
-			// Propagate --> Store all copies in an external database in a suitable format
-			// x4 combinations
-			for (int rot=1; rot<=4 && !max_reached; rot++) {
-				grid = rotateClockwise(grid);
-				solved_grid = rotateClockwise(solved_grid);
-				
-				// x3 combinations
-				for (int block=0; block<=2 && !max_reached; block++) {
-					// x6 combinations
-					for (int i=0; i<=1; i++) {
-						// Swap second and third columns
-						grid = swapColumns(grid, block, 1, 2);
-						solved_grid = swapColumns(solved_grid, block, 1, 2);
-						for (int j=0; j<=2 && !max_reached; j++) {
-							
-							// Move each column to the right
-							grid = swapColumns(grid, block, 0, 2);
+				// Propagate --> Store all copies in an external database in a suitable format
+				// x4 combinations
+				for (int rot=1; rot<=4 && !maxReached; rot++) {
+					grid = rotateClockwise(grid);
+					solvedGrid = rotateClockwise(solvedGrid);
+					
+					// x3 combinations
+					for (int block=0; block<=2 && !maxReached; block++) {
+						// x6 combinations
+						for (int i=0; i<=1; i++) {
+							// Swap second and third columns
 							grid = swapColumns(grid, block, 1, 2);
-							solved_grid = swapColumns(solved_grid, block, 0, 2);
-							solved_grid = swapColumns(solved_grid, block, 1, 2);
-							
-							// Convert each propagated puzzle to String and store it in a dedicated DB
-							exchangeTwoDigits(grid, solved_grid, 1); //x(9!) combinations
+							solvedGrid = swapColumns(solvedGrid, block, 1, 2);
+							for (int j=0; j<=2 && !maxReached; j++) {
+								
+								// Move each column to the right
+								grid = swapColumns(grid, block, 0, 2);
+								grid = swapColumns(grid, block, 1, 2);
+								solvedGrid = swapColumns(solvedGrid, block, 0, 2);
+								solvedGrid = swapColumns(solvedGrid, block, 1, 2);
+								
+								// Convert each propagated puzzle to String and store it in a dedicated DB
+								exchangeDigitsAndStore(grid, solvedGrid, 1); //x(9!) combinations
+							}
 						}
 					}
 				}
@@ -111,54 +140,77 @@ public class Main {
 			e.printStackTrace();
 		}
 		long endTime = System.currentTimeMillis();
-		System.out.println("Finished in "+(endTime-startTime)+" ms. "+seed_puzzles*max_puzzles+" puzzles generated and stored in the database.");
+		System.out.println("Finished in "+(endTime-startTime)+" ms. "+5*SEED_PUZZLES*maxPuzzles+" puzzles generated and stored in the database.");
 	}
 	
-	// OPERATOR 5
-	static int[] sudoku_nums = {1,2,3,4,5,6,7,8,9};
-	static int[][] new_sol;
-	static int[][] new_puzzle;
-	static String string_puzzle; // To be stored in the database for each new puzzle
-	static String string_sol;
+	/* OPERATOR 5 */
 	
-	// Different propagation methods (excl. swapping blocks of columns; deemed unnecessary)
-	public static void exchangeTwoDigits(int[][] grid, int[][] solution, int current_digit) {
+	private final static int[] SUDOKU_NUMS = {1,2,3,4,5,6,7,8,9}; // Used as the default order of Sudoku symbols (i.e., numbers)
+	private static int[][] newSol;
+	private static int[][] newPuzzle;
+	// To be stored in the database for each new puzzle
+	private static String stringPuzzle;
+	private static String stringSol;
+	
+	/*
+	 * Different propagation methods described in the literature
+	 * (excl. swapping blocks of columns; deemed unnecessary).
+	 */
+	
+	/**
+	 * Recursively generates up to 9! permutations off the same puzzle 
+	 * by interchanging the order of the grid's digits. For instance, if
+	 * the digits of a puzzle are displayed with respect to
+	 * {1,2,3,4,5,6,7,8,9}, interchanging 1 and 2 and then 2 and 9 produces
+	 * {9,1,3,4,5,6,7,8,2}, which displays a different puzzle.
+	 * <p>
+	 * The program stops either when all 9! puzzles have been generated or
+	 * when the desired number of distinct puzzles has been reached. Afterwards,
+	 * this method also takes care of storing all the generated puzzles in the DB.
+	 * 
+	 * @param grid  Propagated, original puzzle as a 2D array.
+	 * @param solution  Original terminal pattern as a 2D array.
+	 * @param currentDigit  Used for recursion.
+	 * @throws SQLException when connection to the database fails.
+	 */
+	
+	private static void exchangeDigitsAndStore(int[][] grid, int[][] solution, int currentDigit) throws SQLException {
 		
-		// New puzzle created! -> Store to database
-		if (current_digit == 9) {
+		// New puzzle created -> Store to database
+		if (currentDigit == 9) {
 			
-			// Make new copy of Grid reutilising the function from PuzzleGenerator class
-			new_puzzle = PuzzleGenerator.deepCopy(grid);
-			new_sol = PuzzleGenerator.deepCopy(solution);
+			// Make new copy of Grid re-utilising the function from PuzzleGenerator class
+			newPuzzle = GeneratingAlgorithm.deepCopy(grid);
+			newSol = GeneratingAlgorithm.deepCopy(solution);
 			
 			// Swap digits in grid using new permutation
-			int current_num;
-			int new_num;
+			int currentNum;
+			int newNum;
 			for (int r=0; r<9; r++) {
 				for (int c=0; c<9; c++) {
-					current_num = new_puzzle[r][c];
-					current_num = new_sol[r][c];
-					if (current_num != 0) {
-						new_num = sudoku_nums[current_num-1];
-						if (new_num != current_num) {
-							new_puzzle[r][c] = new_num;
-							new_sol[r][c] = new_num;
+					currentNum = newPuzzle[r][c];
+					currentNum = newSol[r][c];
+					if (currentNum != 0) {
+						newNum = SUDOKU_NUMS[currentNum-1];
+						if (newNum != currentNum) {
+							newPuzzle[r][c] = newNum;
+							newSol[r][c] = newNum;
 						}
 					}
 				}
 			}
 
-			// Convert to string
-			string_puzzle = puzzleToString(new_puzzle);
-			string_sol = puzzleToString(new_sol);
-			rating = df.format(4.00 + (r.nextInt(11) / 10.0)); // generate a random rating between 4.00 and 5.00
+			// Convert to string and generate a random rating between 4.00 and 5.00
+			stringPuzzle = convertPuzzleToString(newPuzzle);
+			stringSol = convertPuzzleToString(newSol);
+			rating = DF.format(4.00 + (r.nextInt(11) / 10.0));
 			
-			// Store string_puzzle in the dedicated SQL database
+			/* Store stringPuzzle in the dedicated SQL database */
 			
 			try {
 				st = conn.prepareStatement("INSERT INTO level"+lvl+" (Puzzle, PuzzleSol, Rating) VALUES (?, ?, ?)");
-				st.setString(1, string_puzzle);
-				st.setString(2, string_sol);
+				st.setString(1, stringPuzzle);
+				st.setString(2, stringSol);
 				st.setString(3, rating);
 				st.executeUpdate();
 				st.close();
@@ -166,37 +218,49 @@ public class Main {
 				e.printStackTrace();
 			}
 			
-			count_puzzles++;
-			total_count++;
-			if (total_count % 100000 == 0) {
-				System.out.println(total_count);
+			countPuzzles++;
+			totalCount++;
+			long one_percent = (SEED_PUZZLES*maxPuzzles)/100;
+			if (totalCount % one_percent == 0) {
+				System.out.println((totalCount/one_percent)+"%");
 			}
-			// Stop the program immediately if the desired number of max_puzzles has been generated and stored
-			if (count_puzzles == max_puzzles) {
-				max_reached = true;
+			// Stop the program immediately if the desired number of maxPuzzles has been generated and stored
+			if (countPuzzles == maxPuzzles) {
+				maxReached = true;
 			}
 
 		}
 		
 		// Find all 9! permutations of Sudoku numbers and use them to exchange corresp. digits in grid
-		int temp; // May get rid of in the future
-		for (int i = current_digit; i<=9 && !max_reached; i++) {
+		int temp;
+		for (int i = currentDigit; i<=9 && !maxReached; i++) {
 			// Swap two digits
-			temp = sudoku_nums[current_digit-1];
-			sudoku_nums[current_digit-1] = sudoku_nums[i-1];
-			sudoku_nums[i-1] = temp;
+			temp = SUDOKU_NUMS[currentDigit-1];
+			SUDOKU_NUMS[currentDigit-1] = SUDOKU_NUMS[i-1];
+			SUDOKU_NUMS[i-1] = temp;
 	        
 			// Move on to next digit
-			exchangeTwoDigits(grid, solved_grid, current_digit+1);
+			exchangeDigitsAndStore(grid, solvedGrid, currentDigit+1);
 			
 			// Un-swap the two initial digits
-			temp = sudoku_nums[current_digit-1];
-			sudoku_nums[current_digit-1] = sudoku_nums[i-1];
-			sudoku_nums[i-1] = temp;
+			temp = SUDOKU_NUMS[currentDigit-1];
+			SUDOKU_NUMS[currentDigit-1] = SUDOKU_NUMS[i-1];
+			SUDOKU_NUMS[i-1] = temp;
 		}
 	}
 	
-	public static int[][] swapTwoCells(int[][] grid, int r1, int c1, int r2, int c2) {
+	/**
+	 * Swap digits of two cells.
+	 * 
+	 * @param grid  Sudoku puzzle as a 2D array.
+	 * @param r1  Row coordinate of cell 1.
+	 * @param c1  Column coordinate of cell 1.
+	 * @param r2  Row coordinate of cell 2.
+	 * @param c2  Column coordinate of cell 2.
+	 * @return  Modified grid with the two cells swapped.
+	 */
+	
+	private static int[][] swapTwoCells(int[][] grid, int r1, int c1, int r2, int c2) {
 		
 		grid[r1][c1] = grid[r1][c1] + grid[r2][c2];
 		grid[r2][c2] = grid[r1][c1] - grid[r2][c2];
@@ -205,31 +269,55 @@ public class Main {
 		return grid;
 	}
 	
-	public static int[][] swapColumns(int[][] grid, int block_col, int c1, int c2) {
+	/**
+	 * Swap two columns of the same column block.
+	 * 
+	 * @param grid  Sudoku grid.
+	 * @param blockCol  Index of the column block (from 0 to 2).
+	 * @param c1  Index of column 1 within said block.
+	 * @param c2  Index of column 2 within said block.
+	 * @return  Modified grid.
+	 */
+	
+	private static int[][] swapColumns(int[][] grid, int blockCol, int c1, int c2) {
 		
-		boolean invalid_input = block_col > 2 || c1 > 2 || c2 > 2 || c1 == c2;
-		if (!invalid_input) {
+		boolean invalidInput = blockCol > 2 || c1 > 2 || c2 > 2 || c1 == c2;
+		if (!invalidInput) {
 			for (int r=0; r<=8; r++) {
-				grid = swapTwoCells(grid, r, 3*block_col+c1, r, 3*block_col+c2);
+				grid = swapTwoCells(grid, r, 3*blockCol+c1, r, 3*blockCol+c2);
 			}
 		}
 		return grid; // If the input is invalid, the initial grid is returned unchanged
 	}
 	
-	public static int[][] rotateClockwise(int[][] grid) {
+	/**
+	 * Transpose the grid to generate a new puzzle.
+	 * 
+	 * @return Rotated grid.
+	 */
+	
+	private static int[][] rotateClockwise(int[][] grid) {
 		
-		int[][] rotated_grid = new int[9][9];
+		int[][] rotatedGrid = new int[9][9];
 		
 		for (int r=0; r<=8; r++) {
 			for (int c=0; c<=8; c++) {
-				rotated_grid[c][8-r] = grid[r][c];
+				rotatedGrid[c][8-r] = grid[r][c];
 			}
 		}
-		return rotated_grid;
+		return rotatedGrid;
 	}
 	
-	// Convert Sudoku puzzles to Strings of a specific format
-	public static String puzzleToString(int[][] puzzle) {
+	/**
+	 * Encode a given puzzle as a string for easier and more
+	 * accessible storage in the database.
+	 * 
+	 * @param puzzle  Puzzle to be transformed.
+	 * @return A string containing the digits of the puzzle in
+	 * order, separating rows by a semicolon.
+	 */
+	
+	private static String convertPuzzleToString(int[][] puzzle) {
 		
 		StringBuilder sb = new StringBuilder();
 		
@@ -242,8 +330,13 @@ public class Main {
 		return sb.toString();
 	}
 	
-	// Calculate factorial
-	public static long factorial(int number) {
+	/**
+	 * Calculate factorial of a given integer.
+	 * 
+	 * @param number  Argument of the factorial.
+	 * @return Number in format 'long' as the factorial of the argument.
+	 */
+	private static long factorial(int number) {
 	    long result = 1;
 
 	    for (int factor = number; factor >= 2; factor--) {

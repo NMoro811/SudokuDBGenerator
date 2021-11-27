@@ -1,13 +1,13 @@
-# This is my Sudoku project. Currently in progress.
+# Sudoku Puzzle Generator
 
-Current stage of the project:
+This project consists of a Java package that is able to generate hundreds of thousands of distinct Sudoku puzzles per minute and for different levels of difficulty. 
 
-I have created a Sudoku puzzle generator based on 5 different levels of difficulty. This program creates thousands of valid terminal patterns from an empty grid based on a Las Vegas algorithm as described in the literature. A upper bound of 0.1s is set on the creation of each full grid. Then, it uses a modified version of the algorithm in the article below to output a new puzzle corresponding to the introduced level of difficulty. The created puzzles comply with all the requirements and seem reasonable from the user's perspective.
-Latest update: Propagate generated puzzles into millions of combinations. Set up a SQL database to store them.
+### Features:
 
-# Next step
-
-Improve code practices (particularly, code safety), revise general structure, and complete documentation. Add extra loop to generate the same number of puzzles for all difficulties. Test different combinations of parameters.
+* A Backtracking Algorithm to solve all kinds of Sudoku puzzles and check whether they have unique solutions or determine their difficulty level.
+* A Las Vegas algorithm that generates fully-solved Sudoku grids (called "terminal patterns") under a given time limit.
+* An algorithm to generate puzzles of 5 different levels of difficulty from a terminal pattern and create up to billions of combinations of the same puzzle.
+* Every puzzle and its corresponding solution are both stored in a dedicated PostgreSQL database as strings for easy accessibility across all kinds of larger-sized projects. Moreover, each puzzle is assigned an initial random rating out of 5.
 
 # Literature
 
